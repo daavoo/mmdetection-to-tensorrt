@@ -2,6 +2,7 @@ import tensorrt as trt
 from torch2trt import torch2trt
 from mmdet.apis import init_detector
 
+from mmdet2trt.core.int8 import int8_calib_dataset_from_folder
 from mmdet2trt.models.builder import build_warper
 from mmdet2trt.models.detectors import TwoStageDetectorWarper
 
@@ -17,7 +18,10 @@ def mmdet2trt(  config,
                 opt_shape_param=None,
                 log_level = logging.WARN,
                 return_warp_model = False,
-                output_names=["num_detections", "boxes", "scores", "classes"]):
+                output_names=["num_detections", "boxes", "scores", "classes"],
+                int8_mode=False,
+                int8_calib_dataset_folder=None,
+                int8_calib_algorithm=DEFAULT_CALIBRATION_ALGORITHM):
     
     device = torch.device(device)
 
@@ -49,6 +53,12 @@ def mmdet2trt(  config,
     with torch.no_grad():
         result = warp_model(dummy_input)
 
+    if int8_mode:
+        logging.info("Using INT8 calibration")
+        if int8_calib_dataset_folder is None:
+            raise ValueError("If using int8_mode, int8_calib_dataset_folder must be set.")
+            int8_calib_dataset = Int8CalibrationDataset(int8_calib_dataset_folder, cfg)
+
     logging.info("convert model")
     start = time.time()
     with torch.cuda.device(device), torch.no_grad():
@@ -60,7 +70,10 @@ def mmdet2trt(  config,
                               max_workspace_size=max_workspace_size,
                               keep_network=False,
                               strict_type_constraints=True,
-                              output_names=output_names)
+                              output_names=output_names,
+                              int8_mode=int8_mode,
+                              int8_calib_dataset=int8_calib_dataset,
+                              int8_calib_algorithm=int8_calib_algorithm)
 
     duration = time.time()-start
     logging.info("convert take time {} s".format(duration))
