@@ -2,12 +2,12 @@ import os
 import torch.utils.data as data
 
 from mmdet.apis.inference import LoadImage
-from mmdet.pipelines import Compose
+from mmdet.datasets.pipelines import Compose
 
 
 class Int8CalibrationDataset(data.Dataset):
     
-    def __init__(self, folder, pipeline):
+    def __init__(self, folder, cfg):
         self.images = os.listdir(folder)
         self.pipeline = Compose([LoadImage()] + cfg.data.test.pipeline[1:])
     
